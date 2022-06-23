@@ -27,16 +27,12 @@ from __future__ import annotations
 
 from typing import TypedDict
 
+from typing_extensions import NotRequired
+
 from .snowflake import Snowflake
 
 
-class _RoleOptional(TypedDict, total=False):
-    tags: RoleTags
-    unicode_emoji: str
-    icon: str
-
-
-class Role(_RoleOptional):
+class Role(TypedDict):
     id: Snowflake
     name: str
     color: int
@@ -45,6 +41,9 @@ class Role(_RoleOptional):
     permissions: str
     managed: bool
     mentionable: bool
+    tags: NotRequired[RoleTags]
+    unicode_emoji: NotRequired[str]
+    icon: NotRequired[str]
 
 
 class RoleTags(TypedDict, total=False):
