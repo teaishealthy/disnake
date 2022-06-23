@@ -27,6 +27,8 @@ from __future__ import annotations
 
 from typing import List, Literal, Optional, TypedDict
 
+from typing_extensions import NotRequired
+
 from .snowflake import Snowflake
 from .user import PartialUser
 
@@ -70,12 +72,9 @@ class ActivitySecrets(TypedDict, total=False):
     match: str
 
 
-class _ActivityEmojiOptional(TypedDict, total=False):
-    id: Snowflake
-    animated: bool
-
-
-class ActivityEmoji(_ActivityEmojiOptional):
+class ActivityEmoji(TypedDict):
+    id: NotRequired[Snowflake]
+    animated: NotRequired[bool]
     name: str
 
 
@@ -84,14 +83,11 @@ class ActivityButton(TypedDict):
     url: str
 
 
-class _SendableActivityOptional(TypedDict, total=False):
-    url: Optional[str]
-
-
 ActivityType = Literal[0, 1, 2, 4, 5]
 
 
-class SendableActivity(_SendableActivityOptional):
+class SendableActivity(TypedDict):
+    url: NotRequired[Optional[str]]
     name: str
     type: ActivityType
 
