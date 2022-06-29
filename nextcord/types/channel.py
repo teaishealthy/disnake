@@ -83,6 +83,7 @@ VideoQualityMode = Literal[1, 2]
 
 
 class VoiceChannel(_BaseGuildChannel):
+    last_message_id: NotRequired[Optional[Snowflake]]
     rtc_region: NotRequired[Optional[str]]
     video_quality_mode: NotRequired[VideoQualityMode]
     type: Literal[2]
