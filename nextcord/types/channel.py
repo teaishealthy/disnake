@@ -70,6 +70,17 @@ class TextChannel(_BaseGuildChannel):
     default_auto_archive_duration: NotRequired[ThreadArchiveDuration]
 
 
+class _ForumChannelOptional(TypedDict, total=False):
+    topic: str
+    last_message_id: Optional[Snowflake]
+    rate_limit_per_user: int
+    default_auto_archive_duration: ThreadArchiveDuration
+
+
+class ForumChannel(_BaseGuildChannel, _ForumChannelOptional):
+    type: Literal[15]
+
+
 class NewsChannel(_BaseGuildChannel):
     type: Literal[5]
     topic: NotRequired[str]
@@ -122,7 +133,13 @@ class ThreadChannel(_BaseChannel):
 
 
 GuildChannel = Union[
-    TextChannel, NewsChannel, VoiceChannel, CategoryChannel, StageChannel, ThreadChannel
+    TextChannel,
+    ForumChannel,
+    NewsChannel,
+    VoiceChannel,
+    CategoryChannel,
+    StageChannel,
+    ThreadChannel,
 ]
 
 

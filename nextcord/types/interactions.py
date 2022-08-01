@@ -74,6 +74,8 @@ class ApplicationCommandOption(TypedDict):
     channel_types: NotRequired[List[ChannelType]]
     min_value: NotRequired[Union[int, float]]
     max_value: NotRequired[Union[int, float]]
+    min_length: NotRequired[int]
+    max_length: NotRequired[int]
     autocomplete: NotRequired[bool]
 
 
@@ -213,6 +215,7 @@ class Interaction(TypedDict):
     message: NotRequired[Message]
     locale: NotRequired[str]
     guild_locale: NotRequired[str]
+    app_permissions: NotRequired[str]
 
 
 class InteractionApplicationCommandCallbackData(TypedDict, total=False):
@@ -232,7 +235,11 @@ class InteractionResponse(TypedDict):
     data: NotRequired[InteractionApplicationCommandCallbackData]
 
 
-class MessageInteraction(TypedDict):
+class _MessageInteractionOptional(TypedDict, total=False):
+    member: Member
+
+
+class MessageInteraction(_MessageInteractionOptional):
     id: Snowflake
     type: InteractionType
     name: str

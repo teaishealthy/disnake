@@ -29,6 +29,13 @@ from typing import List, Literal, Optional, TypedDict, Union
 
 from typing_extensions import NotRequired
 
+from .auto_moderation import (
+    AutoModerationAction,
+    AutoModerationEventType,
+    AutoModerationRule,
+    AutoModerationTriggerMetadata,
+    AutoModerationTriggerType,
+)
 from .channel import ChannelType, PermissionOverwrite, VideoQualityMode
 from .guild import (
     DefaultMessageNotificationLevel,
@@ -92,6 +99,10 @@ AuditLogEvent = Literal[
     110,
     111,
     112,
+    140,
+    141,
+    142,
+    143,
 ]
 
 
@@ -154,6 +165,7 @@ class _AuditLogChange_Bool(TypedDict):
         "available",
         "archived",
         "locked",
+        "enabled",
     ]
     new_value: bool
     old_value: bool
@@ -181,6 +193,12 @@ class _AuditLogChange_ListRole(TypedDict):
     key: Literal["$add", "$remove"]
     new_value: List[Role]
     old_value: List[Role]
+
+
+class _AuditLogChange_ListSnowflake(TypedDict):
+    key: Literal["exempt_roles", "exempt_channels"]
+    new_value: List[Snowflake]
+    old_value: List[Snowflake]
 
 
 class _AuditLogChange_MFALevel(TypedDict):
@@ -237,6 +255,30 @@ class _AuditLogChange_ScheduledEventEntityType(TypedDict):
     old_value: ScheduledEventEntityType
 
 
+class _AuditLogChange_AutoModerationTriggerType(TypedDict):
+    key: Literal["trigger_type"]
+    new_value: AutoModerationTriggerType
+    old_value: AutoModerationTriggerType
+
+
+class _AuditLogChange_AutoModerationEventType(TypedDict):
+    key: Literal["event_type"]
+    new_value: AutoModerationEventType
+    old_value: AutoModerationEventType
+
+
+class _AuditLogChange_AutoModerationActions(TypedDict):
+    key: Literal["actions"]
+    new_value: List[AutoModerationAction]
+    old_value: List[AutoModerationAction]
+
+
+class _AuditLogChange_AutoModerationTriggerMetadata(TypedDict):
+    key: Literal["trigger_metadata"]
+    new_value: AutoModerationTriggerMetadata
+    old_value: AutoModerationTriggerMetadata
+
+
 AuditLogChange = Union[
     _AuditLogChange_AssetHash,
     _AuditLogChange_Bool,
@@ -247,12 +289,17 @@ AuditLogChange = Union[
     _AuditLogChange_Int,
     _AuditLogChange_IntegrationExpireBehaviour,
     _AuditLogChange_ListRole,
+    _AuditLogChange_ListSnowflake,
     _AuditLogChange_MFALevel,
     _AuditLogChange_Overwrites,
     _AuditLogChange_Snowflake,
     _AuditLogChange_Str,
     _AuditLogChange_VerificationLevel,
     _AuditLogChange_VideoQualityMode,
+    _AuditLogChange_AutoModerationTriggerType,
+    _AuditLogChange_AutoModerationEventType,
+    _AuditLogChange_AutoModerationActions,
+    _AuditLogChange_AutoModerationTriggerMetadata,
 ]
 
 
@@ -265,6 +312,8 @@ class AuditEntryInfo(TypedDict):
     id: Snowflake
     type: Literal["0", "1"]
     role_name: str
+    auto_moderation_rule_name: str
+    auto_moderation_rule_trigger_type: str
 
 
 class AuditLogEntry(TypedDict):
@@ -283,3 +332,4 @@ class AuditLog(TypedDict):
     audit_log_entries: List[AuditLogEntry]
     integrations: List[PartialIntegration]
     threads: List[Thread]
+    auto_moderation_rules: List[AutoModerationRule]
