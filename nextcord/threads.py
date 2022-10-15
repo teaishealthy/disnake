@@ -611,7 +611,7 @@ class Thread(Messageable, Hashable, PinsMixin):
         """
         payload = {}
         if name is not MISSING:
-            payload["name"] = str(name)
+            payload["name"] = name
         if archived is not MISSING:
             payload["archived"] = archived
         if auto_archive_duration is not MISSING:

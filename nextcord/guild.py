@@ -905,10 +905,14 @@ class Guild(Hashable):
 
         .. versionadded:: 1.6
         """
-        for role in self._roles.values():
-            if role.is_premium_subscriber():
-                return role
-        return None
+        return next(
+            (
+                role
+                for role in self._roles.values()
+                if role.is_premium_subscriber()
+            ),
+            None,
+        )
 
     @property
     def self_role(self) -> Optional[Role]:
@@ -1007,17 +1011,13 @@ class Guild(Hashable):
         offline members.
         """
         count = getattr(self, "_member_count", None)
-        if count is None:
-            return False
-        return count == len(self._members)
+        return False if count is None else count == len(self._members)
 
     @property
     def shard_id(self) -> int:
         """:class:`int`: Returns the shard ID for this guild if applicable."""
         count = self._state.shard_count
-        if count is None:
-            return 0
-        return (self.id >> 22) % count
+        return 0 if count is None else (self.id >> 22) % count
 
     @property
     def created_at(self) -> datetime.datetime:
@@ -1091,12 +1091,15 @@ class Guild(Hashable):
                 )
 
             allow, deny = perm.pair()
-            payload = {"allow": allow.value, "deny": deny.value, "id": target.id}
+            payload = {
+                "allow": allow.value,
+                "deny": deny.value,
+                "id": target.id,
+                "type": abc._Overwrites.ROLE
+                if isinstance(target, Role)
+                else abc._Overwrites.MEMBER,
+            }
 
-            if isinstance(target, Role):
-                payload["type"] = abc._Overwrites.ROLE
-            else:
-                payload["type"] = abc._Overwrites.MEMBER
 
             perms.append(payload)
 
@@ -1995,8 +1998,7 @@ class Guild(Hashable):
         if self.id != guild_id:
             raise InvalidData("Guild ID resolved to a different guild")
 
-        channel: GuildChannel = factory(guild=self, state=self._state, data=data)  # type: ignore
-        return channel
+        return factory(guild=self, state=self._state, data=data)
 
     def bans(
         self,
@@ -2118,11 +2120,7 @@ class Guild(Hashable):
                 f"Expected int for ``days``, received {days.__class__.__name__} instead."
             )
 
-        if roles:
-            role_ids = [str(role.id) for role in roles]
-        else:
-            role_ids = []
-
+        role_ids = [str(role.id) for role in roles] if roles else []
         data = await self._state.http.prune_members(
             self.id, days, compute_prune_count=compute_prune_count, roles=role_ids, reason=reason
         )
@@ -2214,11 +2212,7 @@ class Guild(Hashable):
                 f"Expected int for ``days``, received {days.__class__.__name__} instead."
             )
 
-        if roles:
-            role_ids = [str(role.id) for role in roles]
-        else:
-            role_ids = []
-
+        role_ids = [str(role.id) for role in roles] if roles else []
         data = await self._state.http.estimate_pruned_members(self.id, days, role_ids)
         return data["pruned"]
 
@@ -2588,11 +2582,7 @@ class Guild(Hashable):
         img_base64 = await utils._obj_to_base64_data(image)
 
         role_ids: SnowflakeList
-        if roles:
-            role_ids = [role.id for role in roles]
-        else:
-            role_ids = []
-
+        role_ids = [role.id for role in roles] if roles else []
         data = await self._state.http.create_custom_emoji(
             self.id, name, img_base64, roles=role_ids, reason=reason
         )
@@ -2651,10 +2641,7 @@ class Guild(Hashable):
         data = await self._state.http.get_roles(self.id)
         roles = [Role(guild=self, state=self._state, data=d) for d in data]
         if cache:
-            self._roles: Dict[int, Role] = {}
-            for role in roles:
-                self._roles[role.id] = role
-
+            self._roles: Dict[int, Role] = {role.id: role for role in roles}
         return roles
 
     @overload
@@ -2746,11 +2733,11 @@ class Guild(Hashable):
         :class:`Role`
             The newly created role.
         """
-        fields: Dict[str, Any] = {}
-        if permissions is not MISSING:
-            fields["permissions"] = str(permissions.value)
-        else:
-            fields["permissions"] = "0"
+        fields: Dict[str, Any] = {
+            "permissions": str(permissions.value)
+            if permissions is not MISSING
+            else "0"
+        }
 
         actual_colour = colour or color or Colour.default()
         if isinstance(actual_colour, int):
@@ -2774,9 +2761,7 @@ class Guild(Hashable):
                 fields["icon"] = await utils._obj_to_base64_data(icon)
 
         data = await self._state.http.create_role(self.id, reason=reason, **fields)
-        role = Role(guild=self, data=data, state=self._state)
-
-        return role
+        return Role(guild=self, data=data, state=self._state)
 
     async def edit_role_positions(
         self, positions: Dict[Snowflake, int], *, reason: Optional[str] = None
@@ -3036,11 +3021,7 @@ class Guild(Hashable):
         :class:`AuditLogEntry`
             The audit log entry.
         """
-        if user is not None:
-            user_id = user.id
-        else:
-            user_id = None
-
+        user_id = user.id if user is not None else None
         if action:
             action = action.value
 
@@ -3677,11 +3658,12 @@ class Guild(Hashable):
             raise InvalidArgument("trigger_type must be of type AutoModerationTriggerType")
 
         payload: AutoModerationRuleCreate = {
-            "name": str(name),
+            "name": name,
             "event_type": event_type.value,
             "trigger_type": trigger_type.value,
             "actions": [action.payload for action in actions],
         }
+
 
         if trigger_metadata is not None:
             if not isinstance(trigger_metadata, AutoModerationTriggerMetadata):

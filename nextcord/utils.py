@@ -238,9 +238,7 @@ def parse_time(timestamp: Optional[str]) -> Optional[datetime.datetime]:
 
 
 def parse_time(timestamp: Optional[str]) -> Optional[datetime.datetime]:
-    if timestamp:
-        return datetime.datetime.fromisoformat(timestamp)
-    return None
+    return datetime.datetime.fromisoformat(timestamp) if timestamp else None
 
 
 def copy_doc(original: Callable) -> Callable[[T], T]:
@@ -385,10 +383,7 @@ def find(predicate: Callable[[T], Any], seq: Iterable[T]) -> Optional[T]:
         The iterable to search through.
     """
 
-    for element in seq:
-        if predicate(element):
-            return element
-    return None
+    return next((element for element in seq if predicate(element)), None)
 
 
 def _key_fmt(key: str) -> str:
@@ -457,21 +452,21 @@ def get(iterable: Iterable[T], **attrs: Any) -> Optional[T]:
     if len(attrs) == 1:
         k, v = attrs.popitem()
         pred = attrget(_key_fmt(k))
-        for elem in iterable:
-            if pred(elem) == v:
-                return elem
-        return None
-
+        return next((elem for elem in iterable if pred(elem) == v), None)
     converted = [(attrget(_key_fmt(attr)), value) for attr, value in attrs.items()]
 
-    for elem in iterable:
-        if _all(pred(elem) == value for pred, value in converted):
-            return elem
-    return None
+    return next(
+        (
+            elem
+            for elem in iterable
+            if _all(pred(elem) == value for pred, value in converted)
+        ),
+        None,
+    )
 
 
 def _unique(iterable: Iterable[T]) -> List[T]:
-    return [x for x in dict.fromkeys(iterable)]
+    return list(dict.fromkeys(iterable))
 
 
 def _get_as_snowflake(data: Any, key: str) -> Optional[int]:
@@ -486,7 +481,7 @@ def _get_as_snowflake(data: Any, key: str) -> Optional[int]:
 def _get_mime_type_for_image(data: bytes):
     if data.startswith(b"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A"):
         return "image/png"
-    elif data[0:3] == b"\xff\xd8\xff" or data[6:10] in (b"JFIF", b"Exif"):
+    elif data[:3] == b"\xff\xd8\xff" or data[6:10] in (b"JFIF", b"Exif"):
         return "image/jpeg"
     elif data.startswith((b"\x47\x49\x46\x38\x37\x61", b"\x47\x49\x46\x38\x39\x61")):
         return "image/gif"
@@ -533,23 +528,19 @@ else:
 
 def _parse_ratelimit_header(request: Any, *, use_clock: bool = False) -> float:
     reset_after: Optional[str] = request.headers.get("X-Ratelimit-Reset-After")
-    if use_clock or not reset_after:
-        utc = datetime.timezone.utc
-        now = datetime.datetime.now(utc)
-        reset = datetime.datetime.fromtimestamp(float(request.headers["X-Ratelimit-Reset"]), utc)
-        return (reset - now).total_seconds()
-    else:
+    if not use_clock and reset_after:
         return float(reset_after)
+    utc = datetime.timezone.utc
+    now = datetime.datetime.now(utc)
+    reset = datetime.datetime.fromtimestamp(float(request.headers["X-Ratelimit-Reset"]), utc)
+    return (reset - now).total_seconds()
 
 
 async def maybe_coroutine(
     f: Callable[P, Union[T, Awaitable[T]]], *args: P.args, **kwargs: P.kwargs
 ) -> T:
     value = f(*args, **kwargs)
-    if _isawaitable(value):
-        return await value
-    else:
-        return value  # type: ignore
+    return await value if _isawaitable(value) else value
         # type ignored as `_isawaitable` provides `TypeGuard[Awaitable[Any]]`
         # yet we need a more specific type guard
 
@@ -670,8 +661,7 @@ _IS_ASCII = re.compile(r"^[\x00-\x7f]+$")
 
 def _string_width(string: str, *, _IS_ASCII=_IS_ASCII) -> int:
     """Returns string's width."""
-    match = _IS_ASCII.match(string)
-    if match:
+    if match := _IS_ASCII.match(string):
         return match.endpos
 
     UNICODE_WIDE_CHAR_TYPE = "WFA"
@@ -702,9 +692,8 @@ def resolve_invite(invite: Union[Invite, str]) -> str:
         return invite.code
     else:
         rx = r"(?:https?\:\/\/)?discord(?:\.gg|(?:app)?\.com\/invite)\/(.+)"
-        m = re.match(rx, invite)
-        if m:
-            return m.group(1)
+        if m := re.match(rx, invite):
+            return m[1]
     return invite
 
 
@@ -728,12 +717,8 @@ def resolve_template(code: Union[Template, str]) -> str:
 
     if isinstance(code, Template):
         return code.code
-    else:
-        rx = r"(?:https?\:\/\/)?discord(?:\.new|(?:app)?\.com\/template)\/(.+)"
-        m = re.match(rx, code)
-        if m:
-            return m.group(1)
-    return code
+    rx = r"(?:https?\:\/\/)?discord(?:\.new|(?:app)?\.com\/template)\/(.+)"
+    return m[1] if (m := re.match(rx, code)) else code
 
 
 _MARKDOWN_ESCAPE_SUBREGEX = "|".join(
@@ -815,9 +800,7 @@ def escape_markdown(text: str, *, as_needed: bool = False, ignore_links: bool = 
         def replacement(match):
             groupdict = match.groupdict()
             is_url = groupdict.get("url")
-            if is_url:
-                return is_url
-            return "\\" + groupdict["markdown"]
+            return is_url or "\\" + groupdict["markdown"]
 
         regex = _MARKDOWN_STOCK_REGEX
         if ignore_links:
@@ -1172,10 +1155,7 @@ def _trim_text(text: str, max_chars: int) -> str:
     :class:`str`
         The trimmed string.
     """
-    if len(text) > max_chars:
-        # \u2026 = ellipsis
-        return text[: max_chars - 1] + "\u2026"
-    return text
+    return text[: max_chars - 1] + "\u2026" if len(text) > max_chars else text
 
 
 def parse_docstring(func: Callable, max_chars: int = MISSING) -> Dict[str, Any]:
@@ -1199,9 +1179,7 @@ def parse_docstring(func: Callable, max_chars: int = MISSING) -> Dict[str, Any]:
     args = {}
 
     if docstring := inspect.cleandoc(inspect.getdoc(func) or "").strip():
-        # Extract the function description
-        description_match = _FUNCTION_DESCRIPTION_REGEX.search(docstring)
-        if description_match:
+        if description_match := _FUNCTION_DESCRIPTION_REGEX.search(docstring):
             description = re.sub(r"\n\s*", " ", description_match.group(0)).strip()
         if max_chars is not MISSING:
             description = _trim_text(description, max_chars)

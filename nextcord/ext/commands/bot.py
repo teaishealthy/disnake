@@ -140,7 +140,7 @@ def when_mentioned_or(*prefixes: str) -> Callable[[Union[Bot, AutoShardedBot], M
 
 
 def _is_submodule(parent: str, child: str) -> bool:
-    return parent == child or child.startswith(parent + ".")
+    return parent == child or child.startswith(f"{parent}.")
 
 
 class MissingMessageContentIntentWarning(UserWarning):
@@ -240,7 +240,7 @@ class BotBase(GroupMixin):
     def dispatch(self, event_name: str, *args: Any, **kwargs: Any) -> None:
         # super() will resolve to Client
         super().dispatch(event_name, *args, **kwargs)  # type: ignore
-        ev = "on_" + event_name
+        ev = f"on_{event_name}"
         for event in self.extra_events.get(ev, []):
             self._schedule_event(event, ev, *args, **kwargs)  # type: ignore
 
@@ -727,10 +727,12 @@ class BotBase(GroupMixin):
 
         # remove all the listeners from the module
         for event_list in self.extra_events.copy().values():
-            remove = []
-            for index, event in enumerate(event_list):
-                if event.__module__ is not None and _is_submodule(name, event.__module__):
-                    remove.append(index)
+            remove = [
+                index
+                for index, event in enumerate(event_list)
+                if event.__module__ is not None
+                and _is_submodule(name, event.__module__)
+            ]
 
             for index in reversed(remove):
                 del event_list[index]
@@ -790,12 +792,13 @@ class BotBase(GroupMixin):
                     asyncio.create_task(setup(self, **extras))
                 except RuntimeError:
                     raise RuntimeError(
-                        f"""
+                        """
                     Looks like you are attempting to load an asynchronous setup function incorrectly.
                     Please read our FAQ here:
                     https://docs.nextcord.dev/en/stable/faq.html#how-do-i-make-my-setup-function-a-coroutine-and-load-it
                     """
                     )
+
             else:
                 setup(self, **extras)
         except Exception as e:

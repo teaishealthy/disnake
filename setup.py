@@ -9,10 +9,10 @@ with open("requirements.txt") as f:
 version = ""
 with open("nextcord/__init__.py") as f:
     match = re.search(r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]', f.read(), re.MULTILINE)
-    if match is None or match.group(1) is None:
+    if match is None or match[1] is None:
         raise RuntimeError("version is not set")
 
-    version = match.group(1)
+    version = match[1]
 
 if not version:
     raise RuntimeError("version is not set")

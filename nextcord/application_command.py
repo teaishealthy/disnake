@@ -22,6 +22,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
+
 from __future__ import annotations
 
 import asyncio
@@ -124,10 +125,7 @@ DEFAULT_SLASH_DESCRIPTION = "No description provided."
 T = TypeVar("T")
 FuncT = TypeVar("FuncT", bound=Callable[..., Any])
 # As nextcord.types exist, we cannot import types
-if TYPE_CHECKING:
-    EllipsisType = ellipsis  # noqa: F821
-else:
-    EllipsisType = type(Ellipsis)
+EllipsisType = ellipsis if TYPE_CHECKING else type(Ellipsis)
 
 
 def _cog_special_method(func: FuncT) -> FuncT:
@@ -184,11 +182,12 @@ class CallbackWrapper:
     ) -> Union[CallbackWrapper, BaseApplicationCommand, SlashApplicationSubcommand]:
         wrapper = super(CallbackWrapper, cls).__new__(cls)
         wrapper.__init__(callback, *args, **kwargs)
-        if isinstance(callback, (BaseApplicationCommand, SlashApplicationSubcommand)):
-            callback.modify_callbacks.extend(wrapper.modify_callbacks)
-            return callback
-        else:
+        if not isinstance(
+            callback, (BaseApplicationCommand, SlashApplicationSubcommand)
+        ):
             return wrapper
+        callback.modify_callbacks.extend(wrapper.modify_callbacks)
+        return callback
 
     def __init__(self, callback: Union[Callable, CallbackWrapper], *args, **kwargs) -> None:
         # noinspection PyTypeChecker
@@ -311,19 +310,21 @@ class ApplicationCommandOption:
         self.autocomplete: Optional[bool] = autocomplete
 
     def get_name_localization_payload(self) -> Optional[Dict[str, str]]:
-        if not self.name_localizations:
-            return None
-
-        return {str(locale): name for locale, name in self.name_localizations.items()}
+        return (
+            {str(locale): name for locale, name in self.name_localizations.items()}
+            if self.name_localizations
+            else None
+        )
 
     def get_description_localization_payload(self) -> Optional[Dict[str, str]]:
-        if not self.description_localizations:
-            return None
-
-        return {
-            str(locale): description
-            for locale, description in self.description_localizations.items()
-        }
+        return (
+            {
+                str(locale): description
+                for locale, description in self.description_localizations.items()
+            }
+            if self.description_localizations
+            else None
+        )
 
     def get_choices_localized_payload(self) -> List[Dict[str, Union[str, int, float, dict, None]]]:
         if self.choices is None:
@@ -339,16 +340,19 @@ class ApplicationCommandOption:
             temp: Dict[str, Union[str, int, float, dict, None]] = {
                 "name": str(display_name),
                 "value": value,
-            }
-            # The annotation prevents PyCharm from flipping the table and putting orange underlines under all of this.
-            if self.choice_localizations and (
-                locales := self.choice_localizations.get(str(display_name), None)
-            ):
-                temp["name_localizations"] = {
-                    str(locale): description for locale, description in locales.items()
+                "name_localizations": {
+                    str(locale): description
+                    for locale, description in locales.items()
                 }
-            else:
-                temp["name_localizations"] = None
+                if self.choice_localizations
+                and (
+                    locales := self.choice_localizations.get(
+                        str(display_name), None
+                    )
+                )
+                else None,
+            }
+
             ret.append(temp)
 
         return ret
@@ -357,7 +361,7 @@ class ApplicationCommandOption:
     def payload(self) -> dict:
         """:class:`dict`: Returns a dict payload made of the attributes of the option to be sent to Discord."""
         if self.type is None:
-            raise ValueError(f"The option type must be set before obtaining the payload.")
+            raise ValueError("The option type must be set before obtaining the payload.")
 
         # noinspection PyUnresolvedReferences
         ret: Dict[str, Any] = {
@@ -648,11 +652,12 @@ class CallbackMixin:
         Optional[:class:`ApplicationHook`]
             ``before_invoke`` method from the parent cog. ``None`` if not the method is not found.
         """
-        if not self.parent_cog:
-            return None
-
-        return ClientCog._get_overridden_method(
-            self.parent_cog.cog_application_command_before_invoke
+        return (
+            ClientCog._get_overridden_method(
+                self.parent_cog.cog_application_command_before_invoke
+            )
+            if self.parent_cog
+            else None
         )
 
     @property
@@ -664,11 +669,12 @@ class CallbackMixin:
         Optional[:class:`ApplicationHook`]
             ``after_invoke`` method from the parent cog. ``None`` if not the method is not found.
         """
-        if not self.parent_cog:
-            return None
-
-        return ClientCog._get_overridden_method(
-            self.parent_cog.cog_application_command_after_invoke
+        return (
+            ClientCog._get_overridden_method(
+                self.parent_cog.cog_application_command_after_invoke
+            )
+            if self.parent_cog
+            else None
         )
 
     def has_error_handler(self) -> bool:
@@ -769,7 +775,7 @@ class CallbackMixin:
                         self.options[arg.name] = arg
 
         except Exception as e:
-            _log.error(f"Error creating from callback %s: %s", self.error_name, e)
+            _log.error("Error creating from callback %s: %s", self.error_name, e)
             raise e
 
     async def can_run(self, interaction: Interaction) -> bool:
@@ -1050,8 +1056,8 @@ class AutocompleteCommandMixin:
             # pyright does not want to lose typeddict specificity but we do not care here
             option_data = interaction.data.get("options", {})  # type: ignore
 
-            if not option_data:
-                raise ValueError("Discord did not provide us option data")
+        if not option_data:
+            raise ValueError("Discord did not provide us option data")
 
         if self.children:
             await self.children[option_data[0]["name"]].call_autocomplete(
@@ -1328,11 +1334,11 @@ class SlashCommandOption(BaseCommandOption, SlashOption, AutocompleteOptionMixin
         typehint_origin = typing_extensions.get_origin(parameter.annotation)
 
         annotation_type: ApplicationCommandOptionType
-        annotation_required = True
         annotation_choices: List[Union[str, int, float]] = []
         annotation_channel_types: List[ChannelType] = []
         annotation_converters: List[OptionConverter] = []
 
+        annotation_required = True
         if typehint_origin is Literal:
             # If they use the Literal typehint as their base. This currently should only support int, float, str, and
             #  technically None for setting it to be optional.
@@ -1423,9 +1429,8 @@ class SlashCommandOption(BaseCommandOption, SlashOption, AutocompleteOptionMixin
                             f"{self.error_name} | Annotation {anno} is incompatible with {found_type} \n| {typehint_origin}\n| {parameter.annotation}\n| {grouped_annotations}"
                         )
 
-                    if not (
-                        isinstance(anno, ApplicationCommandOptionType)
-                        or isinstance(anno, OptionConverter)
+                    if not isinstance(
+                        anno, (ApplicationCommandOptionType, OptionConverter)
                     ) and (channel_types := self.channel_mapping.get(anno)):
                         found_channel_types.extend(channel_types)
 
@@ -1453,11 +1458,12 @@ class SlashCommandOption(BaseCommandOption, SlashOption, AutocompleteOptionMixin
         if self.autocomplete_callback and self.autocomplete is None:
             # If they didn't explicitly enable autocomplete but did add an autocomplete callback...
             self.autocomplete = True
-        if self.autocomplete_callback:
-            if not asyncio.iscoroutinefunction(self.autocomplete_callback):
-                raise TypeError(
-                    f"Given autocomplete callback for kwarg {self.functional_name} isn't a coroutine."
-                )
+        if self.autocomplete_callback and not asyncio.iscoroutinefunction(
+            self.autocomplete_callback
+        ):
+            raise TypeError(
+                f"Given autocomplete callback for kwarg {self.functional_name} isn't a coroutine."
+            )
 
         if cmd_arg.required is not None:
             # If the user manually set if it's required...
@@ -1481,7 +1487,7 @@ class SlashCommandOption(BaseCommandOption, SlashOption, AutocompleteOptionMixin
         self.channel_types = cmd_arg.channel_types or annotation_channel_types or None
         self.converters: List[OptionConverter] = annotation_converters
 
-        if cmd_arg_given is False and parameter.default is not parameter.empty:
+        if not cmd_arg_given and parameter.default is not parameter.empty:
             self.default = parameter.default
         else:
             self.default = None if cmd_arg.default is MISSING else cmd_arg.default
@@ -1629,13 +1635,12 @@ class SlashCommandOption(BaseCommandOption, SlashOption, AutocompleteOptionMixin
             mentionables = {mentionable.id: mentionable for mentionable in user_role_list}
             value = mentionables[int(value)]
 
-        if self.converters:
-            ret = value
-            for converter in self.converters:
-                ret = await converter.convert(interaction, ret)
-            return ret
-        else:
+        if not self.converters:
             return value
+        ret = value
+        for converter in self.converters:
+            ret = await converter.convert(interaction, ret)
+        return ret
 
 
 class SlashCommandMixin(CallbackMixin):
@@ -1690,12 +1695,7 @@ class SlashCommandMixin(CallbackMixin):
         kwargs = {}
         uncalled_args = self.options.copy()
         for arg_data in option_data:
-            if arg_data["name"] in uncalled_args:
-                uncalled_args.pop(arg_data["name"])
-                kwargs[self.options[arg_data["name"]].functional_name] = await self.options[
-                    arg_data["name"]
-                ].handle_value(state, arg_data["value"], interaction)
-            else:
+            if arg_data["name"] not in uncalled_args:
                 # TODO: Handle this better.
                 raise ApplicationCommandOptionMissing(
                     f"An argument was provided that wasn't already in the function, did you recently change it and "
@@ -1703,6 +1703,10 @@ class SlashCommandMixin(CallbackMixin):
                     f"Discord-sent args: {interaction.data['options']}, broke on {arg_data}"  # type: ignore
                 )
 
+            uncalled_args.pop(arg_data["name"])
+            kwargs[self.options[arg_data["name"]].functional_name] = await self.options[
+                arg_data["name"]
+            ].handle_value(state, arg_data["value"], interaction)
         for uncalled_arg in uncalled_args.values():
             kwargs[uncalled_arg.functional_name] = uncalled_arg.default
 
@@ -1866,7 +1870,7 @@ class BaseApplicationCommand(CallbackMixin, CallbackWrapperMixin):
         """:class:`bool`: Returns ``True`` if this command is or should be registered to any guilds."""
         guild_only_ids = set(self.command_ids.keys())
         guild_only_ids.discard(None)
-        return True if (self.guild_ids_to_rollout or guild_only_ids) else False
+        return bool((self.guild_ids_to_rollout or guild_only_ids))
 
     @property
     def guild_ids(self) -> Set[int]:
@@ -1886,19 +1890,14 @@ class BaseApplicationCommand(CallbackMixin, CallbackWrapperMixin):
         guild: Union[:class:`int`, :class:`Guild`]
             Guild or Guild ID to add this command to roll out to.
         """
-        if isinstance(guild, Guild):
-            # I don't like doing `guild = guild.id` and this keeps it extendable.
-            guild_id = guild.id
-        else:
-            guild_id = guild
-
+        guild_id = guild.id if isinstance(guild, Guild) else guild
         self.guild_ids_to_rollout.add(guild_id)
 
     @property
     def is_global(self) -> bool:
         """:class:`bool`: Returns ``True`` if this command is or should be a global command."""
-        return (
-            True if (self.force_global or not self.is_guild or None in self.command_ids) else False
+        return bool(
+            (self.force_global or not self.is_guild or None in self.command_ids)
         )
 
     def get_signature(
@@ -1959,30 +1958,28 @@ class BaseApplicationCommand(CallbackMixin, CallbackWrapperMixin):
         return ret
 
     def get_name_localization_payload(self) -> Optional[Dict[str, str]]:
-        if self.name_localizations:
-            ret = {}
-            for locale, name in self.name_localizations.items():
-                if isinstance(locale, Locale):
-                    # noinspection PyUnresolvedReferences
-                    ret[locale.value] = name
-                else:
-                    ret[locale] = name
-            return ret
-        else:
+        if not self.name_localizations:
             return None
+        ret = {}
+        for locale, name in self.name_localizations.items():
+            if isinstance(locale, Locale):
+                # noinspection PyUnresolvedReferences
+                ret[locale.value] = name
+            else:
+                ret[locale] = name
+        return ret
 
     def get_description_localization_payload(self) -> Optional[dict]:
-        if self.description_localizations:
-            ret = {}
-            for locale, description in self.description_localizations.items():
-                if isinstance(locale, Locale):
-                    # noinspection PyUnresolvedReferences
-                    ret[locale.value] = description
-                else:
-                    ret[locale] = description
-            return ret
-        else:
+        if not self.description_localizations:
             return None
+        ret = {}
+        for locale, description in self.description_localizations.items():
+            if isinstance(locale, Locale):
+                # noinspection PyUnresolvedReferences
+                ret[locale.value] = description
+            else:
+                ret[locale] = description
+        return ret
 
     def get_default_member_permissions_value(self) -> Optional[int]:
         if (
@@ -2025,14 +2022,13 @@ class BaseApplicationCommand(CallbackMixin, CallbackWrapperMixin):
 
         if guild_id:  # Guild-command specific payload options.
             ret["guild_id"] = guild_id
-        else:  # Global command specific payload options.
-            if self.dm_permission is not None:
-                ret["dm_permission"] = self.dm_permission
-            else:
-                # Discord seems to send back the DM permission as True regardless if we sent it or not, so we send as
-                #  the default (True) to ensure payload parity for comparisons.
-                ret["dm_permission"] = True
+        elif self.dm_permission is None:
+            # Discord seems to send back the DM permission as True regardless if we sent it or not, so we send as
+            #  the default (True) to ensure payload parity for comparisons.
+            ret["dm_permission"] = True
 
+        else:
+            ret["dm_permission"] = self.dm_permission
         return ret
 
     def parse_discord_response(
@@ -2444,30 +2440,28 @@ class SlashApplicationSubcommand(SlashCommandMixin, AutocompleteCommandMixin, Ca
             await self.call_slash(state, interaction, option_data)
 
     def get_name_localization_payload(self) -> Optional[dict]:
-        if self.name_localizations:
-            ret = {}
-            for locale, name in self.name_localizations.items():
-                if isinstance(locale, Locale):
-                    # noinspection PyUnresolvedReferences
-                    ret[locale.value] = name
-                else:
-                    ret[locale] = name
-            return ret
-        else:
+        if not self.name_localizations:
             return None
+        ret = {}
+        for locale, name in self.name_localizations.items():
+            if isinstance(locale, Locale):
+                # noinspection PyUnresolvedReferences
+                ret[locale.value] = name
+            else:
+                ret[locale] = name
+        return ret
 
     def get_description_localization_payload(self) -> Optional[dict]:
-        if self.description_localizations:
-            ret = {}
-            for locale, description in self.description_localizations.items():
-                if isinstance(locale, Locale):
-                    # noinspection PyUnresolvedReferences
-                    ret[locale.value] = description
-                else:
-                    ret[locale] = description
-            return ret
-        else:
+        if not self.description_localizations:
             return None
+        ret = {}
+        for locale, description in self.description_localizations.items():
+            if isinstance(locale, Locale):
+                # noinspection PyUnresolvedReferences
+                ret[locale.value] = description
+            else:
+                ret[locale] = description
+        return ret
 
     @property
     def payload(self) -> dict:
@@ -3273,21 +3267,20 @@ def unpack_annotated(given_annotation: Any, resolve_list: list[type] = []) -> ty
     """
     # origin = typing.get_origin(given_annotation)  # TODO: Once Python 3.10 is standard, use this.
     origin = typing_extensions.get_origin(given_annotation)
-    if origin is Annotated:
-        located_annotation = MISSING
-        # arg_list = typing.get_args(given_annotation)  # TODO: Once Python 3.10 is standard, use this
-        arg_list = typing_extensions.get_args(given_annotation)
-        for arg in reversed(arg_list[1:]):
-            if arg in resolve_list or isinstance(arg, type) and issubclass(arg, OptionConverter):
-                located_annotation = arg
-                break
-
-        if located_annotation is MISSING:
-            located_annotation = arg_list[-1]
-
-        return located_annotation
-    else:
+    if origin is not Annotated:
         return given_annotation
+    located_annotation = MISSING
+    # arg_list = typing.get_args(given_annotation)  # TODO: Once Python 3.10 is standard, use this
+    arg_list = typing_extensions.get_args(given_annotation)
+    for arg in reversed(arg_list[1:]):
+        if arg in resolve_list or isinstance(arg, type) and issubclass(arg, OptionConverter):
+            located_annotation = arg
+            break
+
+    if located_annotation is MISSING:
+        located_annotation = arg_list[-1]
+
+    return located_annotation
 
 
 def unpack_annotation(

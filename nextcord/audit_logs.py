@@ -121,15 +121,11 @@ def _transform_channel(
 def _transform_member_id(
     entry: AuditLogEntry, data: Optional[Snowflake]
 ) -> Union[Member, User, None]:
-    if data is None:
-        return None
-    return entry._get_member(int(data))
+    return None if data is None else entry._get_member(int(data))
 
 
 def _transform_guild_id(entry: AuditLogEntry, data: Optional[Snowflake]) -> Optional[Guild]:
-    if data is None:
-        return None
-    return entry._state._get_guild(int(data))
+    return None if data is None else entry._state._get_guild(int(data))
 
 
 def _transform_overwrites(
@@ -200,9 +196,11 @@ def _list_transformer(
     func: Callable[[AuditLogEntry, Any], T]
 ) -> Callable[[AuditLogEntry, Any], List[T]]:
     def _transform(entry: AuditLogEntry, data: Any) -> List[T]:
-        if not data:
-            return []
-        return [func(entry, value) for value in data if value is not None]
+        return (
+            [func(entry, value) for value in data if value is not None]
+            if data
+            else []
+        )
 
     return _transform
 
@@ -210,17 +208,13 @@ def _list_transformer(
 def _transform_auto_moderation_action(
     entry: AuditLogEntry, data: Optional[AutoModerationActionPayload]
 ) -> Optional[AutoModerationAction]:
-    if data is None:
-        return None
-    return AutoModerationAction.from_data(data)
+    return None if data is None else AutoModerationAction.from_data(data)
 
 
 def _transform_auto_moderation_trigger_metadata(
     entry: AuditLogEntry, data: Optional[AutoModerationTriggerMetadataPayload]
 ) -> Optional[AutoModerationTriggerMetadata]:
-    if data is None:
-        return None
-    return AutoModerationTriggerMetadata.from_data(data)
+    return None if data is None else AutoModerationTriggerMetadata.from_data(data)
 
 
 def _transform_role(
@@ -572,12 +566,9 @@ class AuditLogEntry(Hashable):
     @utils.cached_property
     def target(self) -> AuditTarget:
         try:
-            converter = getattr(self, "_convert_target_" + str(self.action.target_type))
+            converter = getattr(self, f"_convert_target_{str(self.action.target_type)}")
         except AttributeError:
-            if self._target_id is None:
-                return None
-
-            return Object(id=self._target_id)
+            return None if self._target_id is None else Object(id=self._target_id)
         else:
             return converter(self._target_id)
 

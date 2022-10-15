@@ -119,7 +119,7 @@ class ApplicationMissingAnyRole(ApplicationCheckFailure):
         missing = [f"'{role}'" for role in missing_roles]
 
         if len(missing) > 2:
-            fmt = "{}, or {}".format(", ".join(missing[:-1]), missing[-1])
+            fmt = f'{", ".join(missing[:-1])}, or {missing[-1]}'
         else:
             fmt = " or ".join(missing)
 
@@ -169,7 +169,7 @@ class ApplicationBotMissingAnyRole(ApplicationCheckFailure):
         missing = [f"'{role}'" for role in missing_roles]
 
         if len(missing) > 2:
-            fmt = "{}, or {}".format(", ".join(missing[:-1]), missing[-1])
+            fmt = f'{", ".join(missing[:-1])}, or {missing[-1]}'
         else:
             fmt = " or ".join(missing)
 
@@ -198,7 +198,7 @@ class ApplicationMissingPermissions(ApplicationCheckFailure):
         ]
 
         if len(missing) > 2:
-            fmt = "{}, and {}".format(", ".join(missing[:-1]), missing[-1])
+            fmt = f'{", ".join(missing[:-1])}, and {missing[-1]}'
         else:
             fmt = " and ".join(missing)
         message = f"You are missing {fmt} permission(s) to run this command."
@@ -226,7 +226,7 @@ class ApplicationBotMissingPermissions(ApplicationCheckFailure):
         ]
 
         if len(missing) > 2:
-            fmt = "{}, and {}".format(", ".join(missing[:-1]), missing[-1])
+            fmt = f'{", ".join(missing[:-1])}, and {missing[-1]}'
         else:
             fmt = " and ".join(missing)
         message = f"Bot requires {fmt} permission(s) to run this command."

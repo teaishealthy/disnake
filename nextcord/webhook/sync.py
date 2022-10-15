@@ -603,11 +603,10 @@ class SyncWebhook(BaseWebhook):
         }
         import requests
 
-        if session is not MISSING:
-            if not isinstance(session, requests.Session):
-                raise TypeError(f"Expected requests.Session not {session.__class__!r}")
-        else:
+        if session is MISSING:
             session = requests  # type: ignore
+        elif not isinstance(session, requests.Session):
+            raise TypeError(f"Expected requests.Session not {session.__class__!r}")
         return cls(data, session, token=bot_token)
 
     @classmethod
@@ -651,11 +650,10 @@ class SyncWebhook(BaseWebhook):
         data["type"] = 1
         import requests
 
-        if session is not MISSING:
-            if not isinstance(session, requests.Session):
-                raise TypeError(f"Expected requests.Session not {session.__class__!r}")
-        else:
+        if session is MISSING:
             session = requests  # type: ignore
+        elif not isinstance(session, requests.Session):
+            raise TypeError(f"Expected requests.Session not {session.__class__!r}")
         return cls(data, session, token=bot_token)  # type: ignore
 
     def fetch(self, *, prefer_auth: bool = True) -> SyncWebhook:
@@ -974,21 +972,18 @@ class SyncWebhook(BaseWebhook):
             previous_allowed_mentions=previous_mentions,
         )
         adapter: WebhookAdapter = _get_webhook_adapter()
-        thread_id: Optional[int] = None
-        if thread is not MISSING:
-            thread_id = thread.id
-
-        data = adapter.execute_webhook(
-            self.id,
-            self.token,
-            session=self.session,
-            payload=params.payload,
-            multipart=params.multipart,
-            files=params.files,
-            thread_id=thread_id,
-            wait=wait,
-        )
+        thread_id = thread.id if thread is not MISSING else None
         if wait:
+            data = adapter.execute_webhook(
+                self.id,
+                self.token,
+                session=self.session,
+                payload=params.payload,
+                multipart=params.multipart,
+                files=params.files,
+                thread_id=thread_id,
+                wait=wait,
+            )
             return self._create_message(data)
 
     def fetch_message(self, id: int, /) -> SyncWebhookMessage:

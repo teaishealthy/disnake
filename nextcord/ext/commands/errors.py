@@ -630,7 +630,7 @@ class MaxConcurrencyReached(CommandError):
         self.number: int = number
         self.per: BucketType = per
         name = per.name
-        suffix = "per %s" % name if per.name != "default" else "globally"
+        suffix = f"per {name}" if per.name != "default" else "globally"
         plural = "%s times %s" if number > 1 else "%s time %s"
         fmt = plural % (number, suffix)
         super().__init__(
@@ -699,7 +699,7 @@ class MissingAnyRole(CheckFailure):
         missing = [f"'{role}'" for role in missing_roles]
 
         if len(missing) > 2:
-            fmt = "{}, or {}".format(", ".join(missing[:-1]), missing[-1])
+            fmt = f'{", ".join(missing[:-1])}, or {missing[-1]}'
         else:
             fmt = " or ".join(missing)
 
@@ -729,7 +729,7 @@ class BotMissingAnyRole(CheckFailure):
         missing = [f"'{role}'" for role in missing_roles]
 
         if len(missing) > 2:
-            fmt = "{}, or {}".format(", ".join(missing[:-1]), missing[-1])
+            fmt = f'{", ".join(missing[:-1])}, or {missing[-1]}'
         else:
             fmt = " or ".join(missing)
 
@@ -776,7 +776,7 @@ class MissingPermissions(CheckFailure):
         ]
 
         if len(missing) > 2:
-            fmt = "{}, and {}".format(", ".join(missing[:-1]), missing[-1])
+            fmt = f'{", ".join(missing[:-1])}, and {missing[-1]}'
         else:
             fmt = " and ".join(missing)
         message = f"You are missing {fmt} permission(s) to run this command."
@@ -804,7 +804,7 @@ class BotMissingPermissions(CheckFailure):
         ]
 
         if len(missing) > 2:
-            fmt = "{}, and {}".format(", ".join(missing[:-1]), missing[-1])
+            fmt = f'{", ".join(missing[:-1])}, and {missing[-1]}'
         else:
             fmt = " and ".join(missing)
         message = f"Bot requires {fmt} permission(s) to run this command."
@@ -838,9 +838,7 @@ class BadUnionArgument(UserInputError):
             try:
                 return x.__name__
             except AttributeError:
-                if hasattr(x, "__origin__"):
-                    return repr(x)
-                return x.__class__.__name__
+                return repr(x) if hasattr(x, "__origin__") else x.__class__.__name__
 
         to_string = [_get_name(x) for x in converters]
         if len(to_string) > 2:
@@ -878,7 +876,7 @@ class BadLiteralArgument(UserInputError):
 
         to_string = [repr(l) for l in literals]
         if len(to_string) > 2:
-            fmt = "{}, or {}".format(", ".join(to_string[:-1]), to_string[-1])
+            fmt = f'{", ".join(to_string[:-1])}, or {to_string[-1]}'
         else:
             fmt = " or ".join(to_string)
 

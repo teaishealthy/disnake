@@ -257,10 +257,7 @@ def _load_default() -> bool:
         else:
             opus = ctypes.util.find_library("opus")
 
-            if opus is None:
-                _lib = None
-            else:
-                _lib = libopus_loader(opus)
+            _lib = None if opus is None else libopus_loader(opus)
     except Exception:
         _lib = None
 
@@ -385,7 +382,7 @@ class Encoder(_OpusStruct):
         )
 
     def set_bitrate(self, kbps: int) -> int:
-        kbps = min(512, max(16, int(kbps)))
+        kbps = min(512, max(16, kbps))
 
         _lib.opus_encoder_ctl(self._state, CTL_SET_BITRATE, kbps * 1024)
         return kbps

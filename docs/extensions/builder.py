@@ -30,9 +30,10 @@ class DPYStandaloneHTMLBuilder(StandaloneHTMLBuilder):
             raise ValueError("No environment was found.")
 
         genindex = IndexEntries(self.env).create_index(self, group_entries=False)
-        indexcounts = []
-        for _k, entries in genindex:
-            indexcounts.append(sum(1 + len(subitems) for _, (_, subitems, _) in entries))
+        indexcounts = [
+            sum(1 + len(subitems) for _, (_, subitems, _) in entries)
+            for _k, entries in genindex
+        ]
 
         genindexcontext = {
             "genindexentries": genindex,
@@ -45,7 +46,7 @@ class DPYStandaloneHTMLBuilder(StandaloneHTMLBuilder):
             self.handle_page("genindex-all", genindexcontext, "genindex.html")
             for (key, entries), count in zip(genindex, indexcounts):
                 ctx = {"key": key, "entries": entries, "count": count, "genindexentries": genindex}
-                self.handle_page("genindex-" + key, ctx, "genindex-single.html")
+                self.handle_page(f"genindex-{key}", ctx, "genindex-single.html")
         else:
             self.handle_page("genindex", genindexcontext, "genindex.html")
 

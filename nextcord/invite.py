@@ -445,10 +445,7 @@ class Invite(Hashable):
         if channel is not None:
             return channel
 
-        if data is None:
-            return None
-
-        return PartialInviteChannel(data)
+        return None if data is None else PartialInviteChannel(data)
 
     def __str__(self) -> str:
         return self.url
@@ -481,7 +478,7 @@ class Invite(Hashable):
 
             This may be an empty string if it is the vanity URL and the code is not set
         """
-        return self.BASE + "/" + self.code if self.code else ""
+        return f"{self.BASE}/{self.code}" if self.code else ""
 
     async def delete(self, *, reason: Optional[str] = None):
         """|coro|

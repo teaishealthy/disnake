@@ -613,8 +613,9 @@ class TextChannel(abc.Messageable, abc.GuildChannel, Hashable, PinsMixin):
         avatar_base64 = await utils._obj_to_base64_data(avatar)
 
         data = await self._state.http.create_webhook(
-            self.id, name=str(name), avatar=avatar_base64, reason=reason
+            self.id, name=name, avatar=avatar_base64, reason=reason
         )
+
         return Webhook.from_state(data, state=self._state)
 
     async def follow(self, *, destination: TextChannel, reason: Optional[str] = None) -> Webhook:
@@ -1153,19 +1154,14 @@ class ForumChannel(abc.GuildChannel, Hashable):
         else:
             raw_embeds = []
 
-        if stickers is not None:
-            raw_stickers = [sticker.id for sticker in stickers]
-        else:
-            raw_stickers = []
-
-        if allowed_mentions is not None:
-            if state.allowed_mentions is not None:
-                raw_allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
-            else:
-                raw_allowed_mentions = allowed_mentions.to_dict()
-        else:
+        raw_stickers = [] if stickers is None else [sticker.id for sticker in stickers]
+        if allowed_mentions is None:
             raw_allowed_mentions = state.allowed_mentions and state.allowed_mentions.to_dict()
 
+        elif state.allowed_mentions is not None:
+            raw_allowed_mentions = state.allowed_mentions.merge(allowed_mentions).to_dict()
+        else:
+            raw_allowed_mentions = allowed_mentions.to_dict()
         if mention_author is not None:
             raw_allowed_mentions = raw_allowed_mentions or AllowedMentions().to_dict()
             raw_allowed_mentions["replied_user"] = bool(mention_author)

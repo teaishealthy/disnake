@@ -170,7 +170,7 @@ def flatten_user(cls):
         # if it's a slotted attribute or a property, redirect it
         # slotted members are implemented as member_descriptors in Type.__dict__
         if not hasattr(value, "__annotations__"):
-            getter = attrgetter("_user." + attr)
+            getter = attrgetter(f"_user.{attr}")
             setattr(cls, attr, property(getter, doc=f"Equivalent to :attr:`User.{attr}`"))
         else:
             # Technically, this can also use attrgetter
@@ -402,9 +402,7 @@ class Member(abc.Messageable, _UserTag):
         }
         self._client_status[None] = sys.intern(data["status"])
 
-        if len(user) > 1:
-            return self._update_inner_user(user)
-        return None
+        return self._update_inner_user(user) if len(user) > 1 else None
 
     def _update_inner_user(self, user: UserPayload) -> Optional[Tuple[User, User]]:
         u = self._user
@@ -499,8 +497,7 @@ class Member(abc.Messageable, _UserTag):
         result = []
         g = self.guild
         for role_id in self._roles:
-            role = g.get_role(role_id)
-            if role:
+            if role := g.get_role(role_id):
                 result.append(role)
         result.append(g.default_role)
         result.sort()
@@ -620,10 +617,7 @@ class Member(abc.Messageable, _UserTag):
         for r in self.roles:
             base.value |= r.permissions.value
 
-        if base.administrator:
-            return Permissions.all()
-
-        return base
+        return Permissions.all() if base.administrator else base
 
     @property
     def voice(self) -> Optional[VoiceState]:
@@ -832,9 +826,7 @@ class Member(abc.Messageable, _UserTag):
             payload["communication_disabled_until"] = timeout.isoformat()
         elif timeout is None:
             payload["communication_disabled_until"] = None
-        elif timeout is MISSING:
-            pass
-        else:
+        elif timeout is not MISSING:
             raise TypeError(
                 "Timeout must be a `datetime.datetime` or `datetime.timedelta`"
                 f"not {timeout.__class__.__name__}"

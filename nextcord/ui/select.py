@@ -149,7 +149,7 @@ class Select(Item[V]):
 
     @min_values.setter
     def min_values(self, value: int):
-        self._underlying.min_values = int(value)
+        self._underlying.min_values = value
 
     @property
     def max_values(self) -> int:
@@ -158,7 +158,7 @@ class Select(Item[V]):
 
     @max_values.setter
     def max_values(self, value: int):
-        self._underlying.max_values = int(value)
+        self._underlying.max_values = value
 
     @property
     def options(self) -> List[SelectOption]:
@@ -247,7 +247,7 @@ class Select(Item[V]):
 
     @disabled.setter
     def disabled(self, value: bool):
-        self._underlying.disabled = bool(value)
+        self._underlying.disabled = value
 
     @property
     def values(self) -> List[str]:
